@@ -1,9 +1,13 @@
 from sklearn.datasets.mldata import fetch_mldata
 import numpy as np
+from sklearn.preprocessing import normalize
+
 mnist = fetch_mldata('mnist-original', data_home='./MNIST')
-np.random.seed(1)
+# np.random.seed(1)
 print(mnist.data.shape)
 
+# normalize data
+mnist.data = normalize(mnist.data)
 X = mnist.target.shape
 print(X)
 y = np.unique(mnist.target)
@@ -35,23 +39,85 @@ for i in range(1, len(data)):
 		minDataIndex = i
 
 for i in range(len(data)):
-	train[i] = np.array(data[i])[:minDataSize//2]
-	test[i] = np.array(data[i])[minDataSize//2+1:]
+	# Divide the data into 50% train 50% test
+	train[i] = np.array(data[i])[:minDataSize//10]
+	test[i] = np.array(data[i])[minDataSize//10+1:]
 
 	print("Train {}: {}".format(i, train[i].shape))
 	print("Test {}: {}".format(i, test[i].shape))
 
-print(train[1][1].shape)
+from network import Network
+import random
+import pickle
+from pathlib import Path 
+neuralNetFile = Path("./neuralNetwork.pkl")
+n = None
+if neuralNetFile.is_file():
+	with open("./neuralNetwork.pkl", "rb") as inputF:
+		n = pickle.load(inputF)
+		print("loading previous net with weights ", n.weights)
+else:
+	n = Network([1, 50, 50, 50, 50, 50, 784])
 
-class Network():
-	def __init__(self, architechture):
-		self.num_layers = len(architechture)
-		self.sizes = architechture
-		self.biases = [np.random.randn(y, 1) for y in architechture[1:]]
-		self.weights = [np.random.randn(y, x) for x, y in zip(architechture[:-1], architechture[1:])]
+# Batches
+batchSize = 1
+numberOfBatches = 10
+print("Batch Size: ", batchSize)
+print("Number of Batches: ", numberOfBatches)
 
-		print(self.biases)
-		print(self.weights)
-		print(self.num_layers)
+indexTestOverFit = []
+for batch in range(numberOfBatches):
+	print("Batch: ", batch)
+	for i in range(batchSize):
+		j = random.randint(4, 5)
+		k = random.randint(0, len(train[j])-1)
+		indexTestOverFit.append([j,k])
+		expectedResult = 0
+		if(j==5):
+			expectedResult = 1
 
-n = Network([3,2,2])
+		result = n.feedForward(train[j][k])
+
+		n.backPropagate(result, [expectedResult])
+
+	n.updateWeights()
+
+# Save network
+with open("neuralNetwork.pkl", "wb") as output:
+	pickle.dump(n, output, pickle.HIGHEST_PROTOCOL)
+
+print("testing")
+# # Test
+fails = 0
+# testLenght = 100
+testLenght = len(indexTestOverFit)
+
+for index in indexTestOverFit:
+	j = index[0]
+	k = index[1]
+	expectedResult = 0
+	if(j==5):
+		expectedResult = 1
+	result = n.feedForward(train[j][k])[0]
+	if(result >= 0.5):
+		result = 1
+	else:
+		result = 0
+	if(result != expectedResult):
+		fails += 1
+
+# for i in range(testLenght):
+# 	j = random.randint(0,9)
+# 	k = random.randint(0, len(train[j]-1)) #temp
+# 	expectedResult = 0
+# 	if(j==5):
+# 		expectedResult = 1
+# 	result = n.feedForward(train[j][k])[0]
+# 	if(result >= 0.5):
+# 		result = 1
+# 	else:
+# 		result = 0
+# 	if(result != expectedResult):
+# 		fails += 1
+
+print("Fails = {}/{}".format(fails, testLenght))
