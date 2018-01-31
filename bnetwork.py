@@ -24,6 +24,7 @@ class Network():
 
 	def __init__(self, layers, learningRate=0.5):
 		
+		self.NIterations = 0
 		self.num_layers = len(layers)
 
 		self.layers = layers
@@ -60,6 +61,8 @@ class Network():
 		return self.outputArray[0]
 
 	def backPropagate(self, output, expectedOutput):
+
+		self.NIterations +=1
 		tempDeltas = self.createDeltaArray()
 
 		output = np.array(output)
