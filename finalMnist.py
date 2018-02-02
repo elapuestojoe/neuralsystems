@@ -7,20 +7,19 @@ import pickle
 import random
 import numpy as np 
 
-# get data
+# 91.9 on 
+# get data 784
 mnist = fetch_mldata('mnist-original', data_home='./MNIST')
 
 # convert to what we are going to predict
-fiveDataset = {"data":[], "target":[]}
+
+filename = "./neuralNetworkST.pkl"
 
 for i in range(len(mnist.target)):
 	if(mnist.target[i]) == 5:
-		mnist.target[i] = 1
-		fiveDataset["data"].append(mnist.data[i])
-		fiveDataset["target"].append(mnist.target[i])
-
+		mnist.target[i] = 0.9
 	else:
-		mnist.target[i] = 0
+		mnist.target[i] = 0.1
 
 # normalize
 mnist.data = normalize(mnist.data)
@@ -28,11 +27,18 @@ mnist.data = normalize(mnist.data)
 # divide into train/test
 x_train, x_test, y_train, y_test = train_test_split(mnist.data, mnist.target, test_size=0.10, random_state=0)
 
+#get array of fives
+fiveDataset = {"data":[], "target":[]}
+for i in range(len(y_train)):
+	if(y_train[i]) == 0.9:
+		fiveDataset["data"].append(x_train[i])
+		fiveDataset["target"].append(y_train[i])
+
 # load neural net or create it
-neuralNetFile = Path("./neuralNetworkImproved.pkl")
+neuralNetFile = Path(filename)
 n = None
 if neuralNetFile.is_file():
-	with open("./neuralNetworkImproved.pkl", "rb") as inputF:
+	with open(filename, "rb") as inputF:
 		n = pickle.load(inputF)
 		# print("loading previous net with weights ", n.weights)
 		print("Loading previous net with NIterations", n.NIterations)
@@ -41,8 +47,7 @@ else:
 
 # random.seed(5)
 batchSize = 1
-numberOfBatches = 1000
-
+numberOfBatches = 5000
 # Train
 for batch in range(numberOfBatches):
 	for i in range(batchSize):
@@ -50,50 +55,59 @@ for batch in range(numberOfBatches):
 		objective = None
 		result = None
 
-		j = random.randint(0, len(x_train) - 1)
-		objective = y_train[j]
+		if(random.random() >= .8):
+			j = random.randint(0, len(fiveDataset["target"])-1)
+			objective = fiveDataset["target"][j]
 
-		result = n.feedForward(x_train[j])
+			result = n.feedForward(fiveDataset["data"][j])[0]
+		else:
+			j = random.randint(0, len(x_train) - 1)
+			objective = y_train[j]
+
+			result = n.feedForward(x_train[j])[0]
 
 		n.backPropagate(result, [objective])
 	n.updateWeights()
 
-#Test code
-stats = np.array([0,0,0])
-
 # Matriz de confusion
 yResults = []
 predictedResults = []
+size = 1000
+correct = 0
+for i in range(size):
 
-for i in range(1000):
 	j = random.randint(0, len(x_test) -1)
 	objective = y_test[j]
 
 	result = n.feedForward(x_test[j])
 	tempResult = result[0]
 
-	if(tempResult >= 0.5):
-		tempResult = 1.0
+	if(objective == 0.9):
+		objective = 1
 	else:
-		tempResult = 0.0
+		objective = 0
 
-	yResults.append(y_test[j])
+	if(tempResult >= 0.5):
+		tempResult = 1
+	else:
+		tempResult = 0
+
+	yResults.append(objective)
 	predictedResults.append(tempResult)
-	stats[int(objective) - int(tempResult)] += 1
+
+	if(tempResult == objective):
+		correct += 1
 
 # Display results
-print(stats)
+print("Correct {}".format(correct/size))
 
-print("Correct {}".format(stats[0]/sum(stats)))
-print("False positives {}".format(stats[-1]/sum(stats)))
-print("False negatives {}".format(stats[1]/sum(stats)))
-print("Total", sum(stats))
+print("Total", size)
 # Save network
 with open("neuralNetworkImproved.pkl", "wb") as output:
 	pickle.dump(n, output, pickle.HIGHEST_PROTOCOL)
 
 # Plot confusion matrix
-score = stats[0]/sum(stats)
+score = correct/size #correctas / totales
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn import metrics

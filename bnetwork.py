@@ -10,18 +10,6 @@ class Network():
 	def createDeltaArray(self):
 		return [np.zeros([1,x]) for x in self.layers[:-1]]
 
-	def resetOutputArray(self):
-		# self.outputArray = [np.zeros([1,x]) for x in layers[:-1]]
-		pass
-
-	def status(self):
-		# print("weights", self.weights)
-		# print("deltas", self.deltas)
-		# print("biases", self.biases)
-		# print("outputArray", self.outputArray)
-		# print("biasWeights", self.biasWeights)
-		print("")
-
 	def __init__(self, layers, learningRate=0.5):
 		
 		self.NIterations = 0
@@ -41,8 +29,6 @@ class Network():
 		self.learningRate = learningRate
 
 		self.outputArray = [np.zeros([1,x]) for x in layers[:-1]]
-
-		self.status()
 
 	def feedForward(self, inputArray):
 		self.outputArray = [np.zeros([1,x]) for x in self.layers[:-1]] 
@@ -79,14 +65,16 @@ class Network():
 			self.deltas[i] = np.add(self.deltas[i], tempDeltas[i])
 
 	def updateWeights(self):
-		# print("updateWeights")
-
 		for layer in range(len(self.weights)):
 			# Todo: check input 
-			self.weights[layer] +=  (self.deltas[layer] *(self.learningRate))
-			self.biasWeights[layer] += (self.deltas[layer] * (self.learningRate))
-
+			wdelta = self.learningRate * (self.deltas[layer] * self.outputArray[layer])
+			self.weights[layer] += wdelta
+			bDelta = self.learningRate * (self.deltas[layer] * self.biases[layer])
+			self.biasWeights[layer] += bDelta
 		self.deltas = self.createDeltaArray()
+
+# s = np.array([2,3,10])
+# print(np.divide(s,2))
 
 # n = Network([1, 10, 30, 300, 784])
 
