@@ -2,8 +2,8 @@ import numpy as np
 import random
 from math_utilities import sigmoid, derivative_sigmoid
 
-np.random.seed(1)
-random.seed(1)
+# np.random.seed(1)
+# random.seed(1)
 
 class Network():
 
@@ -13,6 +13,8 @@ class Network():
 	def __init__(self, layers, learningRate=0.5):
 		
 		self.NIterations = 0
+		self.updates = 0
+		self.i = 0
 		self.num_layers = len(layers)
 
 		self.layers = layers
@@ -49,51 +51,42 @@ class Network():
 	def backPropagate(self, output, expectedOutput):
 
 		self.NIterations +=1
+		self.i += 1
 		tempDeltas = self.createDeltaArray()
 
 		output = np.array(output)
 		expectedOutput = np.array(expectedOutput)
 
-		tempDeltas[0] = (np.apply_along_axis(derivative_sigmoid, 0, output.reshape(1,len(output)))) * (expectedOutput - output)
+		tempDeltas[0] += (np.apply_along_axis(derivative_sigmoid, 0, output.reshape(1,len(output)))) * (expectedOutput - output)
 
 		# propagate to hidden layers
 		for i in range(1, self.num_layers-1):
-			tempDeltas[i] = (np.apply_along_axis(derivative_sigmoid, 0, self.outputArray[i])) * (np.matmul(tempDeltas[i-1], np.transpose(self.weights[i-1])))
+			tempDeltas[i] += (np.apply_along_axis(derivative_sigmoid, 0, self.outputArray[i])) * (np.matmul(tempDeltas[i-1], np.transpose(self.weights[i-1])))
 
 		# accumulate deltas
 		for i in range(len(self.deltas)):
 			self.deltas[i] = np.add(self.deltas[i], tempDeltas[i])
 
 	def updateWeights(self):
+		self.updates +=1
+		for i in range(len(self.deltas)):
+			self.deltas[i] = np.divide(self.deltas[i], self.i)
+
 		for layer in range(len(self.weights)):
 			# Todo: check input 
-			wdelta = self.learningRate * (self.deltas[layer] * self.outputArray[layer])
-			self.weights[layer] += wdelta
-			bDelta = self.learningRate * (self.deltas[layer] * self.biases[layer])
-			self.biasWeights[layer] += bDelta
+			self.weights[layer] +=  self.learningRate * (self.deltas[layer] * self.outputArray[layer])
+			self.biasWeights[layer] += self.learningRate * (self.deltas[layer] * self.biases[layer])
+
 		self.deltas = self.createDeltaArray()
+		self.i = 0
 
-# s = np.array([2,3,10])
-# print(np.divide(s,2))
+	def predict(self, inputs, outputs):
+		predOutputs = []
+		for i in inputs:
+			predOutputs.append(self.feedForward(i))
 
-# n = Network([1, 10, 30, 300, 784])
+		return predOutputs
 
-# for layer in n.weights:
-# 	print(layer.shape)
-
-# # print(n.feedForward([1,1,2]))
-# n.feedForward([1,2,2])
-# n.backPropagate([0.5],[0.1])
-# n.backPropagate([0.5],[0.1])
-# n.feedForward([1,2,2])
-# n.backPropagate([0.5],[10])
-# print(n.deltas)
-# n.updateWeights()
-
-# n.feedForward([1,2,2])
-
-# # n.backPropagate([0.5],[0.1])
-# # n.backPropagate([0.5],[0.1])
-# n.backPropagate([0.5],[0.1])
-
-# n.updateWeights()
+	def stats(self):
+		print("Iterations", self.NIterations)
+		print("Updates", self.updates)
